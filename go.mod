@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/openconfig/gnmi v0.0.0-20220503232738-6eb133c65a13
 	github.com/yndd/cache v0.0.4
-	github.com/yndd/ndd-runtime v0.5.16
+	github.com/yndd/ndd-runtime v0.5.18
 	google.golang.org/grpc v1.47.0
 )
 
@@ -23,6 +23,8 @@ require (
 	github.com/openconfig/goyang v1.0.0 // indirect
 	github.com/openconfig/ygot v0.22.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/stoewer/go-strcase v1.2.0 // indirect
+	github.com/yndd/ndd-yang v0.2.8 // indirect
 	github.com/yndd/nddp-system v0.2.4 // indirect
 	golang.org/x/net v0.0.0-20220516155154-20f960328961 // indirect
 	golang.org/x/sys v0.0.0-20220513210249-45d2b4557a2a // indirect

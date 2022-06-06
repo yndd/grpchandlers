@@ -21,7 +21,9 @@ import (
 	"time"
 
 	"github.com/openconfig/gnmi/proto/gnmi"
+	"github.com/yndd/cache/pkg/validator"
 	"github.com/yndd/ndd-runtime/pkg/meta"
+	"github.com/yndd/ndd-yang/pkg/yparser"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -33,13 +35,22 @@ const (
 
 func (s *subServer) Set(ctx context.Context, p *gnmi.Path, upd *gnmi.Update) (*gnmi.SetResponse, error) {
 	cacheNsTargetName := meta.NamespacedName(p.GetTarget()).GetPrefixNamespacedName(p.GetOrigin())
+	log := s.log.WithValues("origin", p.GetOrigin(), "target", p.GetTarget(), "cacheNsTargetName", cacheNsTargetName)
 
 	ce, err := s.cache.GetEntry(cacheNsTargetName)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, errTargetNotFoundInCache)
+		log.Debug("Set Update/Replace cache entry node found", "error", err)
+		return nil, status.Errorf(codes.NotFound, errTargetNotFoundInCache)
+	}
+
+	// validates and updates the running config
+	if err := validator.ValidateUpdate(ce, []*gnmi.Update{upd}, true, false, validator.Origin_GnmiServer); err != nil {
+		log.Debug("Set Update/Replace  validate update failed", "error", err)
+		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
 	if err := ce.SetSystemCacheStatus(true); err != nil {
+		log.Debug("Set system cache status failed", "error", err)
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
@@ -53,20 +64,27 @@ func (s *subServer) Set(ctx context.Context, p *gnmi.Path, upd *gnmi.Update) (*g
 
 func (s *subServer) Delete(ctx context.Context, p *gnmi.Path, del *gnmi.Path) (*gnmi.SetResponse, error) {
 	cacheNsTargetName := meta.NamespacedName(p.GetTarget()).GetPrefixNamespacedName(p.GetOrigin())
+	log := s.log.WithValues("origin", p.GetOrigin(), "target", p.GetTarget(), "cacheNsTargetName", cacheNsTargetName)
 
-	ce, err := s.cache.GetEntry(cacheNsTargetName)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, errTargetNotFoundInCache)
-	}
+	log.Debug("Set Delete...", "path", yparser.GnmiPath2XPath(del, true))
 
-	if err := ce.SetSystemCacheStatus(true); err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
-	}
+	return nil, status.Errorf(codes.Unimplemented, "not implemented")
 
-	return &gnmi.SetResponse{
-		Response: []*gnmi.UpdateResult{
-			{
-				Timestamp: time.Now().UnixNano(),
-			},
-		}}, nil
+	/*
+		ce, err := s.cache.GetEntry(cacheNsTargetName)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, errTargetNotFoundInCache)
+		}
+
+		if err := ce.SetSystemCacheStatus(true); err != nil {
+			return nil, status.Errorf(codes.Internal, err.Error())
+		}
+
+		return &gnmi.SetResponse{
+			Response: []*gnmi.UpdateResult{
+				{
+					Timestamp: time.Now().UnixNano(),
+				},
+			}}, nil
+	*/
 }
