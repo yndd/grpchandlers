@@ -37,6 +37,8 @@ func (s *subServer) Set(ctx context.Context, p *gnmi.Path, upd *gnmi.Update) (*g
 	cacheNsTargetName := meta.NamespacedName(p.GetTarget()).GetPrefixNamespacedName(p.GetOrigin())
 	log := s.log.WithValues("origin", p.GetOrigin(), "target", p.GetTarget(), "cacheNsTargetName", cacheNsTargetName)
 
+	log.Debug("Set Set...", "upd", upd)
+
 	ce, err := s.cache.GetEntry(cacheNsTargetName)
 	if err != nil {
 		log.Debug("Set Update/Replace cache entry node found", "error", err)
