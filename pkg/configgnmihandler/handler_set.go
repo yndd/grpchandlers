@@ -33,11 +33,20 @@ const (
 	errTargetNotFoundInCache = "could not find target in cache"
 )
 
-func (s *subServer) Set(ctx context.Context, p *gnmi.Path, upd *gnmi.Update) (*gnmi.SetResponse, error) {
-	cacheNsTargetName := meta.NamespacedName(p.GetTarget()).GetPrefixNamespacedName(p.GetOrigin())
-	log := s.log.WithValues("origin", p.GetOrigin(), "target", p.GetTarget(), "cacheNsTargetName", cacheNsTargetName)
+func (s *subServer) Set(ctx context.Context, pf *gnmi.Path, upd *gnmi.Update) (*gnmi.SetResponse, error) {
+	if pf == nil {
+		pf = &gnmi.Path{}
+	}
+	path := &gnmi.Path{}
+	if upd.GetPath() != nil {
+		path = upd.GetPath()
+	}
+	origin := getOrigin(pf, path)
 
-	log.Debug("Set Set...", "upd", upd)
+	cacheNsTargetName := meta.NamespacedName(pf.GetTarget()).GetPrefixNamespacedName(origin)
+	log := s.log.WithValues("origin", origin, "target", pf.GetTarget(), "cacheNsTargetName", cacheNsTargetName)
+
+	log.Debug("Set update.", "upd", upd)
 
 	ce, err := s.cache.GetEntry(cacheNsTargetName)
 	if err != nil {
@@ -47,7 +56,7 @@ func (s *subServer) Set(ctx context.Context, p *gnmi.Path, upd *gnmi.Update) (*g
 
 	// validates and updates the running config
 	if err := validator.ValidateUpdate(ce, []*gnmi.Update{upd}, true, false, validator.Origin_GnmiServer); err != nil {
-		log.Debug("Set Update/Replace  validate update failed", "error", err)
+		log.Debug("Set Update/Replace validate update failed", "error", err)
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
@@ -60,13 +69,24 @@ func (s *subServer) Set(ctx context.Context, p *gnmi.Path, upd *gnmi.Update) (*g
 		Response: []*gnmi.UpdateResult{
 			{
 				Timestamp: time.Now().UnixNano(),
+				Path:      path,
+				Op:        gnmi.UpdateResult_UPDATE,
 			},
 		}}, nil
 }
 
-func (s *subServer) Delete(ctx context.Context, p *gnmi.Path, del *gnmi.Path) (*gnmi.SetResponse, error) {
-	cacheNsTargetName := meta.NamespacedName(p.GetTarget()).GetPrefixNamespacedName(p.GetOrigin())
-	log := s.log.WithValues("origin", p.GetOrigin(), "target", p.GetTarget(), "cacheNsTargetName", cacheNsTargetName)
+func (s *subServer) Delete(ctx context.Context, pf *gnmi.Path, del *gnmi.Path) (*gnmi.SetResponse, error) {
+	if pf == nil {
+		pf = &gnmi.Path{}
+	}
+	path := &gnmi.Path{}
+	if del != nil {
+		path = del
+	}
+	origin := getOrigin(pf, path)
+
+	cacheNsTargetName := meta.NamespacedName(pf.GetTarget()).GetPrefixNamespacedName(origin)
+	log := s.log.WithValues("origin", origin, "target", pf.GetTarget(), "cacheNsTargetName", cacheNsTargetName)
 
 	log.Debug("Set Delete...", "path", yparser.GnmiPath2XPath(del, true))
 

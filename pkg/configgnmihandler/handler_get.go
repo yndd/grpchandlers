@@ -21,22 +21,33 @@ import (
 	"time"
 
 	"github.com/openconfig/gnmi/proto/gnmi"
+	"github.com/yndd/cache/pkg/encoder"
 	"github.com/yndd/ndd-runtime/pkg/meta"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"github.com/yndd/cache/pkg/encoder"
 )
 
 func (s *subServer) Get(ctx context.Context, req *gnmi.GetRequest) (*gnmi.GetResponse, error) {
 	prefix := req.GetPrefix()
+	if prefix == nil {
+		prefix = &gnmi.Path{}
+	}
+	paths := []*gnmi.Path{
+		{},
+	}
+	if len(req.GetPath()) > 0 {
+		paths = req.GetPath()
+	}
+	origin := getOrigin(prefix, paths[0])
+
 	log := s.log.WithValues("origin", prefix.GetOrigin(), "target", prefix.GetTarget())
 	log.Debug("Get...", "path", req.GetPath())
 
-	cacheNsTargetName := meta.NamespacedName(prefix.GetTarget()).GetPrefixNamespacedName(prefix.GetOrigin())
+	cacheNsTargetName := meta.NamespacedName(prefix.GetTarget()).GetPrefixNamespacedName(origin)
 
 	ce, err := s.cache.GetEntry(cacheNsTargetName)
 	if err != nil {
-		return nil, status.Errorf(codes.Unavailable, "cache not ready")
+		return nil, status.Errorf(codes.Unavailable, "cache not ready: %w", err)
 	}
 
 	goStruct := ce.GetRunningConfig() // no DeepCopy required, since we get a deepcopy already
@@ -49,5 +60,5 @@ func (s *subServer) Get(ctx context.Context, req *gnmi.GetRequest) (*gnmi.GetRes
 	}
 	return &gnmi.GetResponse{
 		Notification: ns,
-	}, err
+	}, nil
 }

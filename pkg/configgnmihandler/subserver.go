@@ -20,8 +20,8 @@ import (
 	"context"
 
 	"github.com/openconfig/gnmi/proto/gnmi"
-	"github.com/yndd/ndd-runtime/pkg/logging"
 	"github.com/yndd/cache/pkg/cache"
+	"github.com/yndd/ndd-runtime/pkg/logging"
 )
 
 type Options struct {
@@ -46,4 +46,11 @@ func New(o *Options) SubServer {
 type subServer struct {
 	log   logging.Logger
 	cache cache.Cache
+}
+
+func getOrigin(pf, p *gnmi.Path) string {
+	if p.GetOrigin() != "" {
+		return p.GetOrigin()
+	}
+	return pf.GetOrigin()
 }
